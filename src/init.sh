@@ -73,18 +73,25 @@ amd64 | x86_64)
     err "此脚本仅支持 64 位系统..."
     ;;
 esac
+#不要修改的
+is_pkg="wget unzip tar qrencode bash"
 
-is_core=sing-box
-is_core_name=sing-box
-is_core_dir=/etc/sing-box
+
+#已经修改的
 is_core_bin=/etc/sing-box/bin/sing-box
+is_core_name=sing-box
 is_core_repo=SagerNet/sing-box
+is_core_dir=/etc/sing-box
 is_conf_dir=/etc/sing-box/conf
-is_log_dir=/var/log/sing-box
 is_sh_bin=/usr/local/bin/sing-box
+
+
+
+#尚未修改的
+is_core=sing-box
+is_log_dir=/var/log/sing-box
 is_sh_dir=/etc/sing-box/sh
 is_sh_repo=xiaoutrun-sketch/nova-sbv
-is_pkg="wget unzip tar qrencode bash"
 is_config_json=/etc/sing-box/config.json
 is_caddy_bin=/usr/local/bin/caddy
 is_caddy_dir=/etc/caddy
@@ -102,20 +109,20 @@ is_http_port=80
 is_https_port=443
 
 # core ver
-is_core_ver=$($is_core_bin version | head -n1 | cut -d " " -f3)
+is_core_ver=$(/etc/sing-box/bin/sing-box version | head -n1 | cut -d " " -f3)
 
 # tmp tls key
-is_tls_cer=$is_core_dir/bin/tls.cer
-is_tls_key=$is_core_dir/bin/tls.key
+is_tls_cer=/etc/sing-box/bin/tls.cer
+is_tls_key=/etc/sing-box/bin/tls.key
 [[ ! -f $is_tls_cer || ! -f $is_tls_key ]] && {
     is_tls_tmp=${is_tls_key/key/tmp}
-    $is_core_bin generate tls-keypair tls -m 456 >$is_tls_tmp
+    /etc/sing-box/bin/sing-box generate tls-keypair tls -m 456 >$is_tls_tmp
     awk '/BEGIN PRIVATE KEY/,/END PRIVATE KEY/' $is_tls_tmp >$is_tls_key
     awk '/BEGIN CERTIFICATE/,/END CERTIFICATE/' $is_tls_tmp >$is_tls_cer
     rm $is_tls_tmp
 }
 
-if [[ $(pgrep -f $is_core_bin 2>/dev/null || grep -l "$is_core_bin" /proc/*/cmdline 2>/dev/null) ]]; then
+if [[ $(pgrep -f /etc/sing-box/bin/sing-box 2>/dev/null || grep -l "/etc/sing-box/bin/sing-box" /proc/*/cmdline 2>/dev/null) ]]; then
     is_core_status=$(_green running)
 else
     is_core_status=$(_red_bg stopped)

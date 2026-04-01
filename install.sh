@@ -127,7 +127,7 @@ show_help() {
     echo -e "  -f, --core-file <path>          自定义 sing-box 文件路径, e.g., -f /root/$is_core-linux-amd64.tar.gz"
     echo -e "  -l, --local-install             本地获取安装脚本, 使用当前目录"
     echo -e "  -p, --proxy <addr>              使用代理下载, e.g., -p http://127.0.0.1:2333"
-    echo -e "  -v, --core-version <ver>        自定义 $is_core_name 版本, e.g., -v v1.8.13"
+    echo -e "  -v, --core-version <ver>        自定义 sing-box 版本, e.g., -v v1.8.13"
     echo -e "  -h, --help                      显示此帮助界面\n"
 
     exit 0
@@ -175,7 +175,7 @@ download() {
         ;;
     sh)
         link=https://github.com/xiaoutrun-sketch/nova-sbv/releases/latest/download/code.tar.gz
-        name="$is_core_name 脚本"
+        name="sing-box 脚本"
         tmpfile=$tmpsh
         is_ok=$is_sh_ok
         ;;
@@ -311,7 +311,7 @@ exit_and_del_tmpdir() {
 main() {
 
     # check old version
-    [[ -f $is_sh_bin && -d /etc/sing-box/bin && -d $is_sh_dir && -d $is_conf_dir ]] && {
+    [[ -f /usr/local/bin/sing-box && -d /etc/sing-box/bin && -d $is_sh_dir && -d /etc/sing-box/conf ]] && {
         err "检测到脚本已安装, 如需重装请使用${green} ${is_core} reinstall ${none}命令."
     }
 
@@ -321,7 +321,7 @@ main() {
     # show welcome msg
     clear
     echo
-    echo "........... $is_core_name script by $author .........."
+    echo "........... sing-box script by $author .........."
     echo
 
     # start installing...
@@ -418,18 +418,18 @@ main() {
     fi
 
     # add alias
-    echo "alias sb=$is_sh_bin" >>/root/.bashrc
-    echo "alias $is_core=$is_sh_bin" >>/root/.bashrc
+    echo "alias sb=/usr/local/bin/sing-box" >>/root/.bashrc
+    echo "alias $is_core=/usr/local/bin/sing-box" >>/root/.bashrc
 
     # core command
-    ln -sf $is_sh_dir/$is_core.sh $is_sh_bin
+    ln -sf $is_sh_dir/$is_core.sh /usr/local/bin/sing-box
     ln -sf $is_sh_dir/$is_core.sh ${is_sh_bin/$is_core/sb}
 
     # jq
     [[ $jq_not_found ]] && mv -f $is_jq_ok /usr/bin/jq
 
     # chmod
-    chmod +x /etc/sing-box/bin/sing-box $is_sh_bin /usr/bin/jq ${is_sh_bin/$is_core/sb}
+    chmod +x /etc/sing-box/bin/sing-box /usr/local/bin/sing-box /usr/bin/jq ${is_sh_bin/$is_core/sb}
 
     # create log dir
     mkdir -p $is_log_dir
@@ -443,7 +443,7 @@ main() {
     install_service $is_core &>/dev/null
 
     # create condf dir
-    mkdir -p $is_conf_dir
+    mkdir -p /etc/sing-box/conf
 
     load core.sh
     # create a reality config

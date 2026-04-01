@@ -24,10 +24,10 @@ log_set() {
             ;;
         none)
             rm -rf $is_log_dir/*.log
-            cat <<<$(jq '.log={"disabled":true}' $is_config_json) >$is_config_json
+            cat <<<$(jq '.log={"disabled":true}' /etc/sing-box/config.json) >/etc/sing-box/config.json
             ;;
         *)
-            cat <<<$(jq '.log={output:"/var/log/'$is_core'/access.log",level:"'$is_log_level_use'","timestamp":true}' $is_config_json) >$is_config_json
+            cat <<<$(jq '.log={output:"/var/log/'$is_core'/access.log",level:"'$is_log_level_use'","timestamp":true}' /etc/sing-box/config.json) >/etc/sing-box/config.json
             ;;
         esac
 

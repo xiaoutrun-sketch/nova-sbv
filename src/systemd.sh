@@ -16,7 +16,7 @@ install_service_systemd() {
         is_doc_site=https://sing-box.sagernet.org/
         cat >/lib/systemd/system/$is_core.service <<<"
 [Unit]
-Description=$is_core_name Service
+Description=sing-box Service
 Documentation=$is_doc_site
 After=network.target nss-lookup.target
 
@@ -24,7 +24,7 @@ After=network.target nss-lookup.target
 #User=nobody
 User=root
 NoNewPrivileges=true
-ExecStart=$is_core_bin run -c $is_config_json -C $is_conf_dir
+ExecStart=$is_core_bin run -c /etc/sing-box/config.json -C /etc/sing-box/conf
 Restart=on-failure
 RestartSec=5s
 RestartPreventExitStatus=23
@@ -79,10 +79,10 @@ install_service_openrc() {
 #!/sbin/openrc-run
 
 name="$is_core_name"
-description="$is_core_name Service"
+description="sing-box Service"
 
 command="$is_core_bin"
-command_args="run -c $is_config_json -C $is_conf_dir"
+command_args="run -c /etc/sing-box/config.json -C /etc/sing-box/conf"
 command_background=true
 pidfile="/run/\${RC_SVCNAME}.pid"
 output_log="/var/log/$is_core/access.log"
