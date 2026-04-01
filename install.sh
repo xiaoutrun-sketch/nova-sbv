@@ -321,7 +321,7 @@ main() {
     # show welcome msg
     clear
     echo
-    echo "........... sing-box script by $author .........."
+    echo "........... sing-box script by nova .........."
     echo
 
     # start installing...

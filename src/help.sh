@@ -5,7 +5,7 @@ show_help() {
         ;;
     *)
         [[ $1 ]] && warn "未知选项 '$1'"
-        msg "sing-box script $is_sh_ver by $author"
+        msg "sing-box script $is_sh_ver by nova"
         msg "Usage: $is_core [options]... [args]... "
         msg
         help_info=(

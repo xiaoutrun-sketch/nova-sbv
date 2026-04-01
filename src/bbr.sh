@@ -15,6 +15,6 @@ _try_enable_bbr() {
 	if [[ $_test1 -eq 4 && $_test2 -ge 9 ]] || [[ $_test1 -ge 5 ]]; then
 		_open_bbr
 	else
-		err "不支持启用 BBR 优化."
+		err "不支持启用 BBR 优化."a
 	fi
 }

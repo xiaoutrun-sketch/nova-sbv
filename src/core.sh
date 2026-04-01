@@ -1530,7 +1530,7 @@ update() {
 
 # main menu; if no prefer args.
 is_main_menu() {
-    msg "\n------------- sing-box script $is_sh_ver by $author -------------"
+    msg "\n------------- sing-box script $is_sh_ver by nova -------------"
     msg "sing-box $is_core_ver: $is_core_status"
     msg "群组(Chat): $(msg_ul https://t.me/tg233boy)"
     is_main_start=1
