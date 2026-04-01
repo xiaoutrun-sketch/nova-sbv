@@ -693,7 +693,7 @@ uninstall() {
     fi
     manage stop &>/dev/null
     manage disable &>/dev/null
-    rm -rf /etc/sing-box $is_log_dir /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
+    rm -rf /etc/sing-box /var/log/sing-box /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
     if [[ $is_systemd ]]; then
         rm -f /lib/systemd/system/$is_core.service
     elif [[ $is_openrc ]]; then
@@ -705,15 +705,15 @@ uninstall() {
         manage stop caddy &>/dev/null
         manage disable caddy &>/dev/null
         if [[ $is_systemd ]]; then
-            rm -rf $is_caddy_dir $is_caddy_bin /lib/systemd/system/caddy.service
+            rm -rf /etc/caddy /usr/local/bin/caddy /lib/systemd/system/caddy.service
         elif [[ $is_openrc ]]; then
-            rm -rf $is_caddy_dir $is_caddy_bin /etc/init.d/caddy
+            rm -rf /etc/caddy /usr/local/bin/caddy /etc/init.d/caddy
         fi
     fi
     [[ $is_install_sh ]] && return # reinstall
     _green "\n卸载完成!"
     msg "脚本哪里需要完善? 请反馈"
-    msg "反馈问题) $(msg_ul https://github.com/${is_sh_repo}/issues)\n"
+    msg "反馈问题) $(msg_ul https://github.com/xiaoutrun-sketch/nova-sbv/issues)\n"
 }
 
 # manage run status
@@ -742,7 +742,7 @@ manage() {
     case $2 in
     caddy)
         is_do_name=$2
-        is_run_bin=$is_caddy_bin
+        is_run_bin=/usr/local/bin/caddy
         is_do_name_msg=Caddy
         ;;
     *)
@@ -1260,7 +1260,7 @@ get() {
         _green "安装 Caddy 成功.\n"
         ;;
     reinstall)
-        is_install_sh=$(cat $is_sh_dir/install.sh)
+        is_install_sh=$(cat /etc/sing-box/sh/install.sh)
         uninstall
         bash <<<$is_install_sh
         ;;
@@ -1286,12 +1286,12 @@ get() {
             _green "\nsing-box 正在运行, 跳过测试\n"
         fi
         if [[ $is_caddy ]]; then
-            if [[ ! $(pgrep -f $is_caddy_bin 2>/dev/null || grep -l "$is_caddy_bin" /proc/*/cmdline 2>/dev/null) ]]; then
+            if [[ ! $(pgrep -f /usr/local/bin/caddy 2>/dev/null || grep -l "/usr/local/bin/caddy" /proc/*/cmdline 2>/dev/null) ]]; then
                 _yellow "\n测试运行 Caddy ..\n"
                 manage start caddy &>/dev/null
                 if [[ $is_run_fail == 'caddy' ]]; then
                     _red "Caddy 运行失败信息:"
-                    $is_caddy_bin run --config $is_caddyfile
+                    /usr/local/bin/caddy run --config $is_caddyfile
                 else
                     _green "\n测试通过, 已启动 Caddy ..\n"
                 fi
@@ -1492,7 +1492,7 @@ update() {
         is_update_name=sh
         is_show_name="sing-box 脚本"
         is_run_ver=$is_sh_ver
-        is_update_repo=$is_sh_repo
+        is_update_repo=xiaoutrun-sketch/nova-sbv
         ;;
     3 | caddy)
         [[ ! $is_caddy ]] && err "不支持更新 Caddy."

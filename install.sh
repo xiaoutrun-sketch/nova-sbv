@@ -95,7 +95,7 @@ done
 
 # load bash script.
 load() {
-    . $is_sh_dir/src/$1
+    . /etc/sing-box/sh/src/$1
 }
 
 # wget add --no-check-certificate
@@ -311,7 +311,7 @@ exit_and_del_tmpdir() {
 main() {
 
     # check old version
-    [[ -f /usr/local/bin/sing-box && -d /etc/sing-box/bin && -d $is_sh_dir && -d /etc/sing-box/conf ]] && {
+    [[ -f /usr/local/bin/sing-box && -d /etc/sing-box/bin && -d /etc/sing-box/sh && -d /etc/sing-box/conf ]] && {
         err "检测到脚本已安装, 如需重装请使用${green} ${is_core} reinstall ${none}命令."
     }
 
@@ -399,13 +399,13 @@ main() {
     }
 
     # create sh dir...
-    mkdir -p $is_sh_dir
+    mkdir -p /etc/sing-box/sh
 
     # copy sh file or unzip sh zip file.
     if [[ $local_install ]]; then
-        cp -rf $PWD/* $is_sh_dir
+        cp -rf $PWD/* /etc/sing-box/sh
     else
-        tar zxf $is_sh_ok -C $is_sh_dir
+        tar zxf $is_sh_ok -C /etc/sing-box/sh
     fi
 
     # create core bin dir
@@ -422,8 +422,8 @@ main() {
     echo "alias $is_core=/usr/local/bin/sing-box" >>/root/.bashrc
 
     # core command
-    ln -sf $is_sh_dir/$is_core.sh /usr/local/bin/sing-box
-    ln -sf $is_sh_dir/$is_core.sh ${is_sh_bin/$is_core/sb}
+    ln -sf /etc/sing-box/sh/$is_core.sh /usr/local/bin/sing-box
+    ln -sf /etc/sing-box/sh/$is_core.sh ${is_sh_bin/$is_core/sb}
 
     # jq
     [[ $jq_not_found ]] && mv -f $is_jq_ok /usr/bin/jq
@@ -432,7 +432,7 @@ main() {
     chmod +x /etc/sing-box/bin/sing-box /usr/local/bin/sing-box /usr/bin/jq ${is_sh_bin/$is_core/sb}
 
     # create log dir
-    mkdir -p $is_log_dir
+    mkdir -p /var/log/sing-box
 
     # show a tips msg
     msg ok "生成配置文件..."

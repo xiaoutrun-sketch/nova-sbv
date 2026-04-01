@@ -51,8 +51,8 @@ Requires=network-online.target
 Type=notify
 User=root
 Group=root
-ExecStart=$is_caddy_bin run --environ --config $is_caddyfile --adapter caddyfile
-ExecReload=$is_caddy_bin reload --config $is_caddyfile --adapter caddyfile
+ExecStart=/usr/local/bin/caddy run --environ --config $is_caddyfile --adapter caddyfile
+ExecReload=/usr/local/bin/caddy reload --config $is_caddyfile --adapter caddyfile
 TimeoutStopSec=5s
 Restart=on-failure
 RestartSec=5s
@@ -104,7 +104,7 @@ EOF
 name="Caddy"
 description="Caddy web server"
 
-command="$is_caddy_bin"
+command="/usr/local/bin/caddy"
 command_args="run --environ --config $is_caddyfile --adapter caddyfile"
 command_background=true
 pidfile="/run/\${RC_SVCNAME}.pid"

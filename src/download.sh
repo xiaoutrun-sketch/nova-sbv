@@ -6,7 +6,7 @@ get_latest_version() {
         ;;
     sh)
         name="sing-box 脚本"
-        url="https://api.github.com/repos/$is_sh_repo/releases/latest?v=$RANDOM"
+        url="https://api.github.com/repos/xiaoutrun-sketch/nova-sbv/releases/latest?v=$RANDOM"
         ;;
     caddy)
         name="Caddy"
@@ -40,9 +40,9 @@ download() {
     sh)
         name="sing-box 脚本"
         tmpfile=$tmpdir/sh.tar.gz
-        link="https://github.com/${is_sh_repo}/releases/download/${latest_ver}/code.tar.gz"
+        link="https://github.com/xiaoutrun-sketch/nova-sbv/releases/download/${latest_ver}/code.tar.gz"
         download_file
-        tar zxf $tmpfile -C $is_sh_dir
+        tar zxf $tmpfile -C /etc/sing-box/sh
         chmod +x /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
         ;;
     caddy)
@@ -52,8 +52,8 @@ download() {
         link="https://github.com/${is_caddy_repo}/releases/download/${latest_ver}/caddy_${latest_ver:1}_linux_${is_arch}.tar.gz"
         download_file
         tar zxf $tmpfile -C $tmpdir
-        cp -f $tmpdir/caddy $is_caddy_bin
-        chmod +x $is_caddy_bin
+        cp -f $tmpdir/caddy /usr/local/bin/caddy
+        chmod +x /usr/local/bin/caddy
         ;;
     esac
     rm -rf $tmpdir

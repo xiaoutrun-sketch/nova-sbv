@@ -49,7 +49,7 @@ warn() {
 
 # load bash script.
 load() {
-    . $is_sh_dir/src/$1
+    . /etc/sing-box/sh/src/$1
 }
 
 # wget add --no-check-certificate
@@ -84,17 +84,17 @@ is_core_repo=SagerNet/sing-box
 is_core_dir=/etc/sing-box
 is_conf_dir=/etc/sing-box/conf
 is_sh_bin=/usr/local/bin/sing-box
-
-
-
-#尚未修改的
-is_core=sing-box
 is_log_dir=/var/log/sing-box
 is_sh_dir=/etc/sing-box/sh
 is_sh_repo=xiaoutrun-sketch/nova-sbv
 is_config_json=/etc/sing-box/config.json
 is_caddy_bin=/usr/local/bin/caddy
 is_caddy_dir=/etc/caddy
+
+
+
+#尚未修改的
+is_core=sing-box
 is_caddy_repo=caddyserver/caddy
 is_caddyfile=/etc/caddy/Caddyfile
 is_caddy_conf=/etc/caddy/233boy
@@ -128,7 +128,7 @@ else
     is_core_status=$(_red_bg stopped)
     is_core_stop=1
 fi
-if [[ -f $is_caddy_bin && -d $is_caddy_dir && $is_caddy_service ]]; then
+if [[ -f /usr/local/bin/caddy && -d /etc/caddy && $is_caddy_service ]]; then
     is_caddy=1
     if [[ $is_systemd ]]; then
         [[ -f /lib/systemd/system/caddy.service && ! $(grep '\-\-adapter caddyfile' /lib/systemd/system/caddy.service) ]] && {
@@ -137,12 +137,12 @@ if [[ -f $is_caddy_bin && -d $is_caddy_dir && $is_caddy_service ]]; then
             systemctl restart caddy &
         }
     fi
-    is_caddy_ver=$($is_caddy_bin version | head -n1 | cut -d " " -f1)
+    is_caddy_ver=$(/usr/local/bin/caddy version | head -n1 | cut -d " " -f1)
     is_tmp_http_port=$(grep -E '^ {2,}http_port|^http_port' $is_caddyfile | grep -E -o [0-9]+)
     is_tmp_https_port=$(grep -E '^ {2,}https_port|^https_port' $is_caddyfile | grep -E -o [0-9]+)
     [[ $is_tmp_http_port ]] && is_http_port=$is_tmp_http_port
     [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
-    if [[ $(pgrep -f $is_caddy_bin 2>/dev/null || grep -l "$is_caddy_bin" /proc/*/cmdline 2>/dev/null) ]]; then
+    if [[ $(pgrep -f /usr/local/bin/caddy 2>/dev/null || grep -l "/usr/local/bin/caddy" /proc/*/cmdline 2>/dev/null) ]]; then
         is_caddy_status=$(_green running)
     else
         is_caddy_status=$(_red_bg stopped)
