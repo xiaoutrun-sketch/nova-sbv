@@ -84,12 +84,12 @@ change_list=(
     "更改用户名 (Username)"
 )
 servername_list=(
+    www.microsoft.com
+    www.bing.com
+    www.office.com
+    outlook.live.com
     www.amazon.com
-    www.ebay.com
-    www.paypal.com
     www.cloudflare.com
-    dash.cloudflare.com
-    aws.amazon.com
 )
 
 # shuf fallback for systems without shuf (e.g., Alpine BusyBox)
