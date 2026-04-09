@@ -1,7 +1,7 @@
 get_latest_version() {
     case $1 in
     core)
-        name=$is_core_name
+        name=sing-box
         url="https://api.github.com/repos/SagerNet/sing-box/releases/latest?v=$RANDOM"
         ;;
     sh)
@@ -30,12 +30,12 @@ download() {
     mkdir -p $tmpdir
     case $1 in
     core)
-        name=$is_core_name
-        tmpfile=$tmpdir/$is_core.tar.gz
+        name=sing-box
+        tmpfile=$tmpdir/sing-box.tar.gz
         link="https://github.com/SagerNet/sing-box/releases/download/${latest_ver}/${is_core}-${latest_ver:1}-linux-${is_arch}.tar.gz"
         download_file
         tar zxf $tmpfile --strip-components 1 -C /etc/sing-box/bin
-        chmod +x $is_core_bin
+        chmod +x /etc/sing-box/bin/sing-box
         ;;
     sh)
         name="sing-box 脚本"
@@ -43,7 +43,7 @@ download() {
         link="https://github.com/xiaoutrun-sketch/nova-sbv/releases/download/${latest_ver}/code.tar.gz"
         download_file
         tar zxf $tmpfile -C /etc/sing-box/sh
-        chmod +x /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
+        chmod +x /usr/local/bin/sing-box ${is_sh_bin/sing-box/sb}
         ;;
     caddy)
         name="Caddy"

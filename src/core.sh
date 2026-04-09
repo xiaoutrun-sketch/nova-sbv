@@ -371,15 +371,15 @@ create() {
     caddy)
         load caddy.sh
         [[ $is_install_caddy ]] && caddy_config new
-        [[ ! $(grep "$is_caddy_conf" $is_caddyfile) ]] && {
-            msg "import $is_caddy_conf/*.conf" >>$is_caddyfile
+        [[ ! $(grep "$is_caddy_conf" /etc/caddy/Caddyfile) ]] && {
+            msg "import $is_caddy_conf/*.conf" >>/etc/caddy/Caddyfile
         }
         [[ ! -d $is_caddy_conf ]] && mkdir -p $is_caddy_conf
         caddy_config $2
         manage restart caddy &
         ;;
     config.json)
-        is_log='log:{output:"/var/log/'$is_core'/access.log",level:"info","timestamp":true}'
+        is_log='log:{output:"/var/log/'sing-box'/access.log",level:"info","timestamp":true}'
         is_dns='dns:{}'
         is_ntp='ntp:{"enabled":true,"server":"time.apple.com"},'
         if [[ -f /etc/sing-box/config.json ]]; then
@@ -690,20 +690,20 @@ del() {
 # uninstall
 uninstall() {
     if [[ $is_caddy ]]; then
-        is_tmp_list=("卸载 $is_core_name" "卸载 ${is_core_name} & Caddy")
+        is_tmp_list=("卸载 sing-box" "卸载 ${is_core_name} & Caddy")
         ask list is_do_uninstall
     else
         ask string y "是否卸载 ${is_core_name}? [y]:"
     fi
     manage stop &>/dev/null
     manage disable &>/dev/null
-    rm -rf /etc/sing-box /var/log/sing-box /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
+    rm -rf /etc/sing-box /var/log/sing-box /usr/local/bin/sing-box ${is_sh_bin/sing-box/sb}
     if [[ $is_systemd ]]; then
-        rm -f /lib/systemd/system/$is_core.service
+        rm -f /lib/systemd/system/sing-box.service
     elif [[ $is_openrc ]]; then
-        rm -f /etc/init.d/$is_core
+        rm -f /etc/init.d/sing-box
     fi
-    sed -i "/$is_core/d" /root/.bashrc
+    sed -i "/sing-box/d" /root/.bashrc
     # uninstall caddy; 2 is ask result
     if [[ $REPLY == '2' ]]; then
         manage stop caddy &>/dev/null
@@ -750,9 +750,9 @@ manage() {
         is_do_name_msg=Caddy
         ;;
     *)
-        is_do_name=$is_core
+        is_do_name=sing-box
         is_run_bin=/etc/sing-box/bin/sing-box
-        is_do_name_msg=$is_core_name
+        is_do_name_msg=sing-box
         ;;
     esac
     if [[ $is_systemd ]]; then
@@ -825,7 +825,7 @@ add() {
                 [[ $(grep -E -i "^$is_lower$" <<<$v) ]] && is_new_protocol=$v && break
             done
 
-            [[ ! $is_new_protocol ]] && err "无法识别 ($1), 请使用: $is_core add [protocol] [args... | auto]"
+            [[ ! $is_new_protocol ]] && err "无法识别 ($1), 请使用: sing-box add [protocol] [args... | auto]"
             ;;
         esac
     fi
@@ -882,7 +882,7 @@ add() {
     [[ $1 && ! $is_change ]] && {
         msg "\n使用协议: $is_new_protocol"
         # err msg tips
-        is_err_tips="\n\n请使用: $(_green $is_core add $1 $is_add_opts) 来添加 $is_new_protocol 配置"
+        is_err_tips="\n\n请使用: $(_green sing-box add $1 $is_add_opts) 来添加 $is_new_protocol 配置"
     }
 
     # remove old protocol args
@@ -976,7 +976,7 @@ add() {
                 get_port
                 is_https_port=$tmp_port
                 warn "端口 (80 或 443) 已经被占用, 你也可以考虑使用 no-auto-tls"
-                msg "\e[41m no-auto-tls 帮助(help)\e[0m: $(msg_ul https://233boy.com/$is_core/no-auto-tls/)\n"
+                msg "\e[41m no-auto-tls 帮助(help)\e[0m: $(msg_ul https://233boy.com/sing-box/no-auto-tls/)\n"
                 msg "\n Caddy 将使用非标准端口实现自动配置 TLS, HTTP:$is_http_port HTTPS:$is_https_port\n"
                 msg "请确定是否继续???"
                 pause
@@ -1029,9 +1029,9 @@ add() {
             [[ ! $tmp_uuid ]] && get_uuid
             is_test_json_save=/etc/sing-box/conf/tmp-test-$tmp_uuid
             cat <<<"$is_new_json" >$is_test_json_save
-            $is_core_bin check -c $is_test_json_save &>/dev/null
+            /etc/sing-box/bin/sing-box check -c $is_test_json_save &>/dev/null
             if [[ $? != 0 ]]; then
-                warn "Shadowsocks 协议 ($ss_method) 不支持使用密码 ($(_red_bg $ss_password))\n\n你可以使用命令: $(_green $is_core ss2022) 生成支持的密码.\n\n脚本将自动创建可用密码:)"
+                warn "Shadowsocks 协议 ($ss_method) 不支持使用密码 ($(_red_bg $ss_password))\n\n你可以使用命令: $(_green sing-box ss2022) 生成支持的密码.\n\n脚本将自动创建可用密码:)"
                 ss_password=
                 # create new json.
                 json_str=
@@ -1241,9 +1241,9 @@ get() {
         ;;
     ssss | ss2022)
         if [[ $(grep 128 <<<$ss_method) ]]; then
-            $is_core_bin generate rand 16 --base64
+            /etc/sing-box/bin/sing-box generate rand 16 --base64
         else
-            $is_core_bin generate rand 32 --base64
+            /etc/sing-box/bin/sing-box generate rand 32 --base64
         fi
         ;;
     ping)
@@ -1277,12 +1277,12 @@ get() {
             }
         fi
         is_no_manage_msg=1
-        if [[ ! $(pgrep -f $is_core_bin 2>/dev/null || grep -l "$is_core_bin" /proc/*/cmdline 2>/dev/null) ]]; then
+        if [[ ! $(pgrep -f /etc/sing-box/bin/sing-box 2>/dev/null || grep -l "/etc/sing-box/bin/sing-box" /proc/*/cmdline 2>/dev/null) ]]; then
             _yellow "\n测试运行 sing-box ..\n"
             manage start &>/dev/null
-            if [[ $is_run_fail == $is_core ]]; then
+            if [[ $is_run_fail == sing-box ]]; then
                 _red "sing-box 运行失败信息:"
-                $is_core_bin run -c /etc/sing-box/config.json -C /etc/sing-box/conf
+                /etc/sing-box/bin/sing-box run -c /etc/sing-box/config.json -C /etc/sing-box/conf
             else
                 _green "\n测试通过, 已启动 sing-box ..\n"
             fi
@@ -1295,7 +1295,7 @@ get() {
                 manage start caddy &>/dev/null
                 if [[ $is_run_fail == 'caddy' ]]; then
                     _red "Caddy 运行失败信息:"
-                    /usr/local/bin/caddy run --config $is_caddyfile
+                    /usr/local/bin/caddy run --config /etc/caddy/Caddyfile
                 else
                     _green "\n测试通过, 已启动 Caddy ..\n"
                 fi
@@ -1420,7 +1420,7 @@ info() {
         msg "$a $tt= \e[${is_color}m${is_info_str[$i]}\e[0m"
     done
     if [[ $is_new_install ]]; then
-        warn "首次安装请查看脚本帮助文档: $(msg_ul https://233boy.com/$is_core/$is_core-script/)"
+        warn "首次安装请查看脚本帮助文档: $(msg_ul https://233boy.com/sing-box/$is_core-script/)"
     fi
     if [[ $is_url ]]; then
         msg "------------- ${info_list[12]} -------------"
@@ -1433,7 +1433,7 @@ info() {
         msg "------------- no-auto-tls INFO -------------"
         msg "端口(port): $port"
         msg "路径(path): $path"
-        msg "\e[41m帮助(help)\e[0m: $(msg_ul https://233boy.com/$is_core/no-auto-tls/)"
+        msg "\e[41m帮助(help)\e[0m: $(msg_ul https://233boy.com/sing-box/no-auto-tls/)"
     fi
     footer_msg
 }
@@ -1446,7 +1446,7 @@ footer_msg() {
     unset c n m s b
     msg "------------- END -------------"
     msg "关注(tg): $(msg_ul https://t.me/tg2333)"
-    msg "文档(doc): $(msg_ul https://233boy.com/$is_core/$is_core-script/)"
+    msg "文档(doc): $(msg_ul https://233boy.com/sing-box/$is_core-script/)"
     msg "推广(ads): 机场推荐(sing-box services): $(msg_ul https://g${c}e${n}t${m}j${s}m${b}s.com/)\n"
     ####### 要点13脸吗只会改我链接的小人 #######
 }
@@ -1486,9 +1486,9 @@ url_qr() {
 # update core, sh, caddy
 update() {
     case $1 in
-    1 | core | $is_core)
+    1 | core | sing-box)
         is_update_name=core
-        is_show_name=$is_core_name
+        is_show_name=sing-box
         is_run_ver=v${is_core_ver##* }
         is_update_repo=SagerNet/sing-box
         ;;
@@ -1506,7 +1506,7 @@ update() {
         is_update_repo=$is_caddy_repo
         ;;
     *)
-        err "无法识别 ($1), 请使用: $is_core update [core | sh | caddy] [ver]"
+        err "无法识别 ($1), 请使用: sing-box update [core | sh | caddy] [ver]"
         ;;
     esac
     [[ $2 ]] && is_new_ver=v${2#v}
@@ -1558,7 +1558,7 @@ is_main_menu() {
         msg "\n管理状态执行: $(_green $is_do_manage)\n"
         ;;
     6)
-        is_tmp_list=("更新$is_core_name" "更新脚本")
+        is_tmp_list=("更新sing-box" "更新脚本")
         [[ $is_caddy ]] && is_tmp_list+=("更新Caddy")
         ask list is_do_update null "\n请选择更新:\n"
         update $REPLY
@@ -1612,10 +1612,10 @@ main() {
     bin | pbk | check | completion | format | generate | geoip | geosite | merge | rule-set | run | tools)
         is_run_command=$1
         if [[ $1 == 'bin' ]]; then
-            $is_core_bin ${@:2}
+            /etc/sing-box/bin/sing-box ${@:2}
         else
             [[ $is_run_command == 'pbk' ]] && is_run_command="generate reality-keypair"
-            $is_core_bin $is_run_command ${@:2}
+            /etc/sing-box/bin/sing-box $is_run_command ${@:2}
         fi
         ;;
     bbr)
@@ -1725,7 +1725,7 @@ main() {
         [[ $is_caddy ]] && msg "Caddy $is_caddy_ver: $is_caddy_status\n"
         ;;
     start | stop | r | restart)
-        [[ $2 && $2 != 'caddy' ]] && err "无法识别 ($2), 请使用: $is_core $1 [caddy]"
+        [[ $2 && $2 != 'caddy' ]] && err "无法识别 ($2), 请使用: sing-box $1 [caddy]"
         manage $1 $2 &
         ;;
     t | test)
@@ -1760,7 +1760,7 @@ main() {
                 change
             }
         else
-            err "无法识别 ($1), 获取帮助请使用: $is_core help"
+            err "无法识别 ($1), 获取帮助请使用: sing-box help"
         fi
         ;;
     esac

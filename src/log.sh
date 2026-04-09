@@ -15,19 +15,19 @@ log_set() {
             [[ $(grep -E -i "^${1,,}$" <<<$v) ]] && is_log_level_use=$v && break
         done
         [[ ! $is_log_level_use ]] && {
-            err "无法识别 log 参数: $@ \n请使用 $is_core log [${is_log_level_list[@]}] 进行相关设定.\n备注: del 参数仅临时删除 log 文件; none 参数将不会生成 log 文件."
+            err "无法识别 log 参数: $@ \n请使用 sing-box log [${is_log_level_list[@]}] 进行相关设定.\n备注: del 参数仅临时删除 log 文件; none 参数将不会生成 log 文件."
         }
         case $is_log_level_use in
         del)
             rm -rf /var/log/sing-box/*.log
-            msg "\n $(_green 已临时删除 log 文件, 如果你想要完全禁止生成 log 文件请使用: $is_core log none)\n"
+            msg "\n $(_green 已临时删除 log 文件, 如果你想要完全禁止生成 log 文件请使用: sing-box log none)\n"
             ;;
         none)
             rm -rf /var/log/sing-box/*.log
             cat <<<$(jq '.log={"disabled":true}' /etc/sing-box/config.json) >/etc/sing-box/config.json
             ;;
         *)
-            cat <<<$(jq '.log={output:"/var/log/'$is_core'/access.log",level:"'$is_log_level_use'","timestamp":true}' /etc/sing-box/config.json) >/etc/sing-box/config.json
+            cat <<<$(jq '.log={output:"/var/log/'sing-box'/access.log",level:"'$is_log_level_use'","timestamp":true}' /etc/sing-box/config.json) >/etc/sing-box/config.json
             ;;
         esac
 

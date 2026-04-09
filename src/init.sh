@@ -90,13 +90,13 @@ is_sh_repo=xiaoutrun-sketch/nova-sbv
 is_config_json=/etc/sing-box/config.json
 is_caddy_bin=/usr/local/bin/caddy
 is_caddy_dir=/etc/caddy
+is_caddyfile=/etc/caddy/Caddyfile
 
 
 
 #尚未修改的
-is_core=sing-box
+$is_core=sing-box
 is_caddy_repo=caddyserver/caddy
-is_caddyfile=/etc/caddy/Caddyfile
 is_caddy_conf=/etc/caddy/233boy
 is_systemd=$(type -P systemctl)
 is_openrc=$(type -P rc-service)
@@ -138,8 +138,8 @@ if [[ -f /usr/local/bin/caddy && -d /etc/caddy && $is_caddy_service ]]; then
         }
     fi
     is_caddy_ver=$(/usr/local/bin/caddy version | head -n1 | cut -d " " -f1)
-    is_tmp_http_port=$(grep -E '^ {2,}http_port|^http_port' $is_caddyfile | grep -E -o [0-9]+)
-    is_tmp_https_port=$(grep -E '^ {2,}https_port|^https_port' $is_caddyfile | grep -E -o [0-9]+)
+    is_tmp_http_port=$(grep -E '^ {2,}http_port|^http_port' /etc/caddy/Caddyfile | grep -E -o [0-9]+)
+    is_tmp_https_port=$(grep -E '^ {2,}https_port|^https_port' /etc/caddy/Caddyfile | grep -E -o [0-9]+)
     [[ $is_tmp_http_port ]] && is_http_port=$is_tmp_http_port
     [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
     if [[ $(pgrep -f /usr/local/bin/caddy 2>/dev/null || grep -l "/usr/local/bin/caddy" /proc/*/cmdline 2>/dev/null) ]]; then

@@ -12,9 +12,9 @@ install_service() {
 
 install_service_systemd() {
     case $1 in
-    $is_core)
+    sing-box)
         is_doc_site=https://sing-box.sagernet.org/
-        cat >/lib/systemd/system/$is_core.service <<<"
+        cat >/lib/systemd/system/sing-box.service <<<"
 [Unit]
 Description=sing-box Service
 Documentation=$is_doc_site
@@ -57,8 +57,8 @@ StartLimitBurst=100
 Type=notify
 User=root
 Group=root
-ExecStart=/usr/local/bin/caddy run --environ --config $is_caddyfile --adapter caddyfile
-ExecReload=/usr/local/bin/caddy reload --config $is_caddyfile --adapter caddyfile
+ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile --adapter caddyfile
+ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 TimeoutStopSec=5s
 Restart=on-failure
 RestartSec=5s
@@ -80,19 +80,19 @@ WantedBy=multi-user.target"
 
 install_service_openrc() {
     case $1 in
-    $is_core)
-        cat >/etc/init.d/$is_core <<EOF
+    sing-box)
+        cat >/etc/init.d/sing-box <<EOF
 #!/sbin/openrc-run
 
-name="$is_core_name"
+name="sing-box"
 description="sing-box Service"
 
-command="$is_core_bin"
+command="/etc/sing-box/bin/sing-box"
 command_args="run -c /etc/sing-box/config.json -C /etc/sing-box/conf"
 command_background=true
 pidfile="/run/\${RC_SVCNAME}.pid"
-output_log="/var/log/$is_core/access.log"
-error_log="/var/log/$is_core/error.log"
+output_log="/var/log/sing-box/access.log"
+error_log="/var/log/sing-box/error.log"
 
 supervisor=supervise-daemon
 
@@ -101,7 +101,7 @@ depend() {
     after firewall
 }
 EOF
-        chmod +x /etc/init.d/$is_core
+        chmod +x /etc/init.d/sing-box
         ;;
     caddy)
         cat >/etc/init.d/caddy <<EOF
@@ -111,7 +111,7 @@ name="Caddy"
 description="Caddy web server"
 
 command="/usr/local/bin/caddy"
-command_args="run --environ --config $is_caddyfile --adapter caddyfile"
+command_args="run --environ --config /etc/caddy/Caddyfile --adapter caddyfile"
 command_background=true
 pidfile="/run/\${RC_SVCNAME}.pid"
 
