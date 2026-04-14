@@ -12,9 +12,9 @@ install_service() {
 
 install_service_systemd() {
     case $1 in
-    $is_core)
+    sing-box)
         is_doc_site=https://sing-box.sagernet.org/
-        cat >/lib/systemd/system/$is_core.service <<<"
+        cat >/lib/systemd/system/sing-box.service <<<"
 [Unit]
 Description=sing-box Service
 Documentation=$is_doc_site
@@ -77,19 +77,19 @@ WantedBy=multi-user.target"
 
 install_service_openrc() {
     case $1 in
-    $is_core)
-        cat >/etc/init.d/$is_core <<EOF
+    sing-box)
+        cat >/etc/init.d/sing-box <<EOF
 #!/sbin/openrc-run
 
-name="$is_core_name"
+name="sing-box"
 description="sing-box Service"
 
-command="$is_core_bin"
+command="/etc/sing-box/bin/sing-box"
 command_args="run -c /etc/sing-box/config.json -C /etc/sing-box/conf"
 command_background=true
 pidfile="/run/\${RC_SVCNAME}.pid"
-output_log="/var/log/$is_core/access.log"
-error_log="/var/log/$is_core/error.log"
+output_log="/var/log/sing-box/access.log"
+error_log="/var/log/sing-box/error.log"
 
 supervisor=supervise-daemon
 
@@ -98,7 +98,7 @@ depend() {
     after firewall
 }
 EOF
-        chmod +x /etc/init.d/$is_core
+        chmod +x /etc/init.d/sing-box
         ;;
     nginx)
         cat >/etc/init.d/nginx <<EOF

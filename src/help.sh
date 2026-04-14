@@ -6,13 +6,13 @@ show_help() {
     *)
         [[ $1 ]] && warn "未知选项 '$1'"
         msg "sing-box script $is_sh_ver by nova"
-        msg "Usage: $is_core [options]... [args]... "
+        msg "Usage: sing-box [options]... [args]... "
         msg
         help_info=(
             "基本:"
             "   v, version                                      显示当前版本"
             "   ip                                              返回当前主机的 IP"
-            "   pbk                                             同等于 $is_core generate reality-keypair"
+            "   pbk                                             同等于 sing-box generate reality-keypair"
             "   get-port                                        返回一个可用的端口"
             "   ss2022                                          返回一个可用于 Shadowsocks 2022 的密码\n"
             "一般:"
@@ -60,10 +60,10 @@ show_help() {
             "   debug [name]                                    显示一些 debug 信息, 仅供参考"
             "   gen [...]                                       同等于 add, 但只显示 JSON 内容, 不创建文件, 测试使用"
             "   no-auto-tls [...]                               同等于 add, 但禁止自动配置 TLS, 可用于 *TLS 相关协议"
-            # "   xapi [...]                                      同等于 $is_core api, 但 API 后端使用当前运行的 sing-box 服务\n"
+            # "   xapi [...]                                      同等于 sing-box api, 但 API 后端使用当前运行的 sing-box 服务\n"
             "其他:"
             "   bbr                                             启用 BBR, 如果支持"
-            "   bin [...]                                       运行 sing-box 命令, 例如: $is_core bin help"
+            "   bin [...]                                       运行 sing-box 命令, 例如: sing-box bin help"
             "   [...] [...]                                     兼容绝大多数的 sing-box 命令, 例如: sing-box generate uuid"
             "   h, help                                         显示此帮助界面\n"
         )
@@ -72,7 +72,7 @@ show_help() {
         done
         msg "谨慎使用 del, ddel, 此选项会直接删除配置; 无需确认"
         msg "反馈问题) $(msg_ul https://github.com/xiaoutrun-sketch/nova-sbv/issues) "
-        msg "文档(doc) $(msg_ul https://233boy.com/$is_core/$is_core-script/)"
+        msg "文档(doc) $(msg_ul https://233boy.com/sing-box/$is_core-script/)"
         ;;
 
     esac

@@ -124,7 +124,7 @@ msg() {
 # show help msg
 show_help() {
     echo -e "Usage: $0 [-f xxx | -l | -p xxx | -v xxx | -h]"
-    echo -e "  -f, --core-file <path>          自定义 sing-box 文件路径, e.g., -f /root/$is_core-linux-amd64.tar.gz"
+    echo -e "  -f, --core-file <path>          自定义 sing-box 文件路径, e.g., -f /root/sing-box-linux-amd64.tar.gz"
     echo -e "  -l, --local-install             本地获取安装脚本, 使用当前目录"
     echo -e "  -p, --proxy <addr>              使用代理下载, e.g., -p http://127.0.0.1:2333"
     echo -e "  -v, --core-version <ver>        自定义 sing-box 版本, e.g., -v v1.8.13"
@@ -169,7 +169,7 @@ download() {
     core)
         [[ ! $is_core_ver ]] && is_core_ver=$(_wget -qO- "https://api.github.com/repos/SagerNet/sing-box/releases/latest?v=$RANDOM" | grep tag_name | grep -E -o 'v([0-9.]+)')
         [[ $is_core_ver ]] && link="https://github.com/SagerNet/sing-box/releases/download/${is_core_ver}/${is_core}-${is_core_ver:1}-linux-${is_arch}.tar.gz"
-        name=$is_core_name
+        name=sing-box
         tmpfile=$tmpcore
         is_ok=$is_core_ok
         ;;
