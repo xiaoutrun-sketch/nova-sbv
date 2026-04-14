@@ -8,9 +8,11 @@ get_latest_version() {
         name="sing-box 脚本"
         url="https://api.github.com/repos/xiaoutrun-sketch/nova-sbv/releases/latest?v=$RANDOM"
         ;;
-    caddy)
-        name="Caddy"
-        url="https://api.github.com/repos/$is_caddy_repo/releases/latest?v=$RANDOM"
+    nginx)
+        name="Nginx"
+        # nginx 通过包管理器安装，不需要获取版本
+        latest_ver="latest"
+        return
         ;;
     esac
     latest_ver=$(_wget -qO- $url | grep tag_name | grep -E -o 'v([0-9.]+)')
@@ -45,15 +47,13 @@ download() {
         tar zxf $tmpfile -C /etc/sing-box/sh
         chmod +x /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
         ;;
-    caddy)
-        name="Caddy"
-        tmpfile=$tmpdir/caddy.tar.gz
-        # https://github.com/caddyserver/caddy/releases/download/v2.6.4/caddy_2.6.4_linux_amd64.tar.gz
-        link="https://github.com/${is_caddy_repo}/releases/download/${latest_ver}/caddy_${latest_ver:1}_linux_${is_arch}.tar.gz"
-        download_file
-        tar zxf $tmpfile -C $tmpdir
-        cp -f $tmpdir/caddy /usr/local/bin/caddy
-        chmod +x /usr/local/bin/caddy
+    nginx)
+        name="Nginx"
+        # nginx 通过包管理器安装
+        msg "通过包管理器安装 Nginx..."
+        $cmd install nginx -y &>/dev/null || {
+            err "安装 Nginx 失败，请手动安装"
+        }
         ;;
     esac
     rm -rf $tmpdir

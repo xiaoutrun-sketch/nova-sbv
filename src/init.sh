@@ -88,22 +88,20 @@ is_log_dir=/var/log/sing-box
 is_sh_dir=/etc/sing-box/sh
 is_sh_repo=xiaoutrun-sketch/nova-sbv
 is_config_json=/etc/sing-box/config.json
-is_caddy_bin=/usr/local/bin/caddy
-is_caddy_dir=/etc/caddy
+is_nginx_bin=/usr/sbin/nginx
+is_nginx_dir=/etc/nginx
 
 
 
 #尚未修改的
 is_core=sing-box
-is_caddy_repo=caddyserver/caddy
-is_caddyfile=/etc/caddy/Caddyfile
-is_caddy_conf=/etc/caddy/233boy
+is_nginx_conf=/etc/nginx/233boy
 is_systemd=$(type -P systemctl)
 is_openrc=$(type -P rc-service)
 if [[ $is_systemd ]]; then
-    is_caddy_service=$(systemctl list-units --full -all | grep caddy.service)
+    is_nginx_service=$(systemctl list-units --full -all | grep nginx.service)
 elif [[ $is_openrc ]]; then
-    [[ -f /etc/init.d/caddy ]] && is_caddy_service=1
+    [[ -f /etc/init.d/nginx ]] && is_nginx_service=1
 fi
 is_http_port=80
 is_https_port=443
@@ -128,25 +126,19 @@ else
     is_core_status=$(_red_bg stopped)
     is_core_stop=1
 fi
-if [[ -f /usr/local/bin/caddy && -d /etc/caddy && $is_caddy_service ]]; then
-    is_caddy=1
-    if [[ $is_systemd ]]; then
-        [[ -f /lib/systemd/system/caddy.service && ! $(grep '\-\-adapter caddyfile' /lib/systemd/system/caddy.service) ]] && {
-            load systemd.sh
-            install_service caddy
-            systemctl restart caddy &
-        }
+if [[ -f /usr/sbin/nginx && -d /etc/nginx && $is_nginx_service ]]; then
+    is_nginx=1
+    is_nginx_ver=$(nginx -v 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+    # 从 nginx 配置中读取端口（如果有自定义）
+    if [[ -f $is_nginx_conf/*.conf ]]; then
+        is_tmp_https_port=$(grep -E 'listen.*ssl' $is_nginx_conf/*.conf 2>/dev/null | head -1 | grep -oE '[0-9]+' | head -1)
+        [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
     fi
-    is_caddy_ver=$(/usr/local/bin/caddy version | head -n1 | cut -d " " -f1)
-    is_tmp_http_port=$(grep -E '^ {2,}http_port|^http_port' $is_caddyfile | grep -E -o [0-9]+)
-    is_tmp_https_port=$(grep -E '^ {2,}https_port|^https_port' $is_caddyfile | grep -E -o [0-9]+)
-    [[ $is_tmp_http_port ]] && is_http_port=$is_tmp_http_port
-    [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
-    if [[ $(pgrep -f /usr/local/bin/caddy 2>/dev/null || grep -l "/usr/local/bin/caddy" /proc/*/cmdline 2>/dev/null) ]]; then
-        is_caddy_status=$(_green running)
+    if [[ $(pgrep -f "nginx: master" 2>/dev/null) ]]; then
+        is_nginx_status=$(_green running)
     else
-        is_caddy_status=$(_red_bg stopped)
-        is_caddy_stop=1
+        is_nginx_status=$(_red_bg stopped)
+        is_nginx_stop=1
     fi
 fi
 
