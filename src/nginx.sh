@@ -144,26 +144,63 @@ EOF
         [[ ! -f ${is_nginx_site_file}.add ]] && echo "# see https://233boy.com/$is_core/nginx-auto-tls/" >${is_nginx_site_file}.add
         # 确保 SSL 目录存在
         mkdir -p /etc/nginx/ssl
-        # 如果证书不存在，使用脚本自带的临时证书
+        # 先用临时证书，确保 nginx 能启动
         if [[ ! -f /etc/nginx/ssl/${host}.crt ]]; then
             cp -f $is_tls_cer /etc/nginx/ssl/${host}.crt
             cp -f $is_tls_key /etc/nginx/ssl/${host}.key
         fi
+        # 自动获取 Let's Encrypt 证书
+        nginx_get_cert
     }
 }
 
 # 使用 certbot 获取 Let's Encrypt 证书
 nginx_get_cert() {
-    [[ ! $(type -P certbot) ]] && {
-        msg "安装 certbot..."
-        $cmd install certbot python3-certbot-nginx -y &>/dev/null
+    # 检查是否已有 Let's Encrypt 证书
+    [[ -f /etc/letsencrypt/live/${host}/fullchain.pem ]] && {
+        ln -sf /etc/letsencrypt/live/${host}/fullchain.pem /etc/nginx/ssl/${host}.crt
+        ln -sf /etc/letsencrypt/live/${host}/privkey.pem /etc/nginx/ssl/${host}.key
+        _green "使用已有的 Let's Encrypt 证书"
+        return
     }
+
+    # 安装 certbot
+    [[ ! $(type -P certbot) ]] && {
+        _yellow "安装 certbot..."
+        $cmd install certbot -y &>/dev/null
+    }
+
     if [[ $(type -P certbot) ]]; then
-        certbot certonly --nginx -d $host --non-interactive --agree-tos --register-unsafely-without-email &>/dev/null
-        if [[ $? == 0 ]]; then
+        _yellow "正在获取 Let's Encrypt 证书..."
+        
+        # 先重载 nginx 使临时证书生效
+        systemctl reload nginx &>/dev/null || nginx -s reload &>/dev/null
+        
+        # 使用 standalone 模式获取证书（需要临时停止 nginx 的 80 端口）
+        # 或使用 webroot 模式
+        certbot certonly --standalone --preferred-challenges http \
+            -d $host \
+            --non-interactive \
+            --agree-tos \
+            --register-unsafely-without-email \
+            --pre-hook "systemctl stop nginx || true" \
+            --post-hook "systemctl start nginx || true" &>/dev/null
+        
+        if [[ $? == 0 && -f /etc/letsencrypt/live/${host}/fullchain.pem ]]; then
             ln -sf /etc/letsencrypt/live/${host}/fullchain.pem /etc/nginx/ssl/${host}.crt
             ln -sf /etc/letsencrypt/live/${host}/privkey.pem /etc/nginx/ssl/${host}.key
-            msg "Let's Encrypt 证书获取成功"
+            _green "Let's Encrypt 证书获取成功"
+            
+            # 设置自动续期
+            if [[ ! -f /etc/cron.d/certbot-renew ]]; then
+                echo "0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'" > /etc/cron.d/certbot-renew
+                _green "已配置证书自动续期"
+            fi
+        else
+            _yellow "Let's Encrypt 证书获取失败，使用临时证书"
+            _yellow "你可以稍后手动运行: certbot certonly --nginx -d $host"
         fi
+    else
+        _yellow "certbot 安装失败，使用临时证书"
     fi
 }
