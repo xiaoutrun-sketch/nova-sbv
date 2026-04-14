@@ -3,10 +3,34 @@ nginx_config() {
     case $1 in
     new)
         mkdir -p /etc/nginx/sites-enabled /etc/nginx/sites-available $is_nginx_conf
-        # 创建主配置文件（如果不存在）
+        
+        # 创建 mime.types 文件（如果不存在）
+        [[ ! -f /etc/nginx/mime.types ]] && cat >/etc/nginx/mime.types <<'MIMEOF'
+types {
+    text/html                             html htm shtml;
+    text/css                              css;
+    text/xml                              xml;
+    image/gif                             gif;
+    image/jpeg                            jpeg jpg;
+    application/javascript                js;
+    application/json                      json;
+    application/pdf                       pdf;
+    image/png                             png;
+    image/svg+xml                         svg svgz;
+    image/webp                            webp;
+    font/woff                             woff;
+    font/woff2                            woff2;
+    application/octet-stream              bin exe dll;
+    application/zip                       zip;
+    video/mp4                             mp4;
+    audio/mpeg                            mp3;
+}
+MIMEOF
+        
+        # 创建主配置文件（如果不存在或不包含我们的配置目录）
         if [[ ! -f /etc/nginx/nginx.conf ]] || [[ ! $(grep "include $is_nginx_conf" /etc/nginx/nginx.conf) ]]; then
             cat >/etc/nginx/nginx.conf <<-EOF
-user www-data;
+user root;
 worker_processes auto;
 pid /run/nginx.pid;
 error_log /var/log/nginx/error.log;
