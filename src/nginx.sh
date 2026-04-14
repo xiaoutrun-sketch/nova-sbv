@@ -2,30 +2,7 @@ nginx_config() {
     is_nginx_site_file=$is_nginx_conf/${host}.conf
     case $1 in
     new)
-        mkdir -p /etc/nginx/sites-enabled /etc/nginx/sites-available $is_nginx_conf
-        
-        # 创建 mime.types 文件（如果不存在）
-        [[ ! -f /etc/nginx/mime.types ]] && cat >/etc/nginx/mime.types <<'MIMEOF'
-types {
-    text/html                             html htm shtml;
-    text/css                              css;
-    text/xml                              xml;
-    image/gif                             gif;
-    image/jpeg                            jpeg jpg;
-    application/javascript                js;
-    application/json                      json;
-    application/pdf                       pdf;
-    image/png                             png;
-    image/svg+xml                         svg svgz;
-    image/webp                            webp;
-    font/woff                             woff;
-    font/woff2                            woff2;
-    application/octet-stream              bin exe dll;
-    application/zip                       zip;
-    video/mp4                             mp4;
-    audio/mpeg                            mp3;
-}
-MIMEOF
+        mkdir -p /etc/nginx/sites-enabled /etc/nginx/sites-available $is_nginx_conf /var/log/nginx
         
         # 创建主配置文件（如果不存在或不包含我们的配置目录）
         if [[ ! -f /etc/nginx/nginx.conf ]] || [[ ! $(grep "include $is_nginx_conf" /etc/nginx/nginx.conf) ]]; then
@@ -42,8 +19,6 @@ events {
 http {
     sendfile on;
     tcp_nopush on;
-    types_hash_max_size 2048;
-    include /etc/nginx/mime.types;
     default_type application/octet-stream;
 
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -54,7 +29,6 @@ http {
     gzip on;
 
     include $is_nginx_conf/*.conf;
-    include /etc/nginx/sites-enabled/*.conf;
 }
 EOF
         fi
