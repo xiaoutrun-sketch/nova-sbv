@@ -13,7 +13,9 @@ pid /run/nginx.pid;
 error_log /var/log/nginx/error.log;
 
 events {
-    worker_connections 1024;
+    worker_connections 10240;
+    use epoll;
+    multi_accept on;
 }
 
 http {
