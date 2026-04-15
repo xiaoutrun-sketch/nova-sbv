@@ -41,32 +41,29 @@ ProtectSystem=full
 [Install]
 WantedBy=multi-user.target"
         ;;
-    caddy)
-        cat >/lib/systemd/system/caddy.service <<<"
-#https://github.com/caddyserver/dist/blob/master/init/caddy.service
+    nginx)
+        cat >/lib/systemd/system/nginx.service <<<"
 [Unit]
-Description=Caddy
-Documentation=https://caddyserver.com/docs/
-After=network.target network-online.target
-Requires=network-online.target
-#设置重启限制20min内重启100次
+Description=The NGINX HTTP and reverse proxy server
+Documentation=https://nginx.org/en/docs/
+After=syslog.target network-online.target remote-fs.target nss-lookup.target
+Wants=network-online.target
 StartLimitIntervalSec=1200
 StartLimitBurst=100
 
 [Service]
-Type=notify
-User=root
-Group=root
-ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile --adapter caddyfile
-ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+Type=forking
+PIDFile=/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t
+ExecStart=/usr/sbin/nginx
+ExecReload=/bin/kill -s HUP \$MAINPID
+ExecStop=/bin/kill -s QUIT \$MAINPID
 TimeoutStopSec=5s
 Restart=on-failure
 RestartSec=5s
 LimitNPROC=10000
 LimitNOFILE=1048576
 PrivateTmp=true
-ProtectSystem=full
-#AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target"
@@ -103,26 +100,32 @@ depend() {
 EOF
         chmod +x /etc/init.d/sing-box
         ;;
-    caddy)
-        cat >/etc/init.d/caddy <<EOF
+    nginx)
+        cat >/etc/init.d/nginx <<EOF
 #!/sbin/openrc-run
 
-name="Caddy"
-description="Caddy web server"
+name="Nginx"
+description="Nginx HTTP server"
 
-command="/usr/local/bin/caddy"
-command_args="run --environ --config /etc/caddy/Caddyfile --adapter caddyfile"
-command_background=true
-pidfile="/run/\${RC_SVCNAME}.pid"
-
-supervisor=supervise-daemon
+command="/usr/sbin/nginx"
+command_args=""
+command_background=false
+pidfile="/run/nginx.pid"
 
 depend() {
     need net
     after firewall
 }
+
+start_pre() {
+    checkconfig || return 1
+}
+
+checkconfig() {
+    /usr/sbin/nginx -t -q
+}
 EOF
-        chmod +x /etc/init.d/caddy
+        chmod +x /etc/init.d/nginx
         ;;
     esac
 

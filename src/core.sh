@@ -84,12 +84,12 @@ change_list=(
     "更改用户名 (Username)"
 )
 servername_list=(
-    www.microsoft.com
-    www.bing.com
-    www.office.com
-    outlook.live.com
     www.amazon.com
+    www.ebay.com
+    www.paypal.com
     www.cloudflare.com
+    dash.cloudflare.com
+    aws.amazon.com
 )
 
 # shuf fallback for systems without shuf (e.g., Alpine BusyBox)
@@ -351,9 +351,9 @@ create() {
             # config.json
             create config.json
         fi
-        # caddy auto tls
-        [[ $is_caddy && $host && ! $is_no_auto_tls ]] && {
-            create caddy $net
+        # nginx auto tls
+        [[ $is_nginx && $host && ! $is_no_auto_tls ]] && {
+            create nginx $net
         }
         # restart core
         manage restart &
@@ -368,18 +368,15 @@ create() {
         jq <<<$is_new_json
         msg
         ;;
-    caddy)
-        load caddy.sh
-        [[ $is_install_caddy ]] && caddy_config new
-        [[ ! $(grep "$is_caddy_conf" /etc/caddy/Caddyfile) ]] && {
-            msg "import $is_caddy_conf/*.conf" >>/etc/caddy/Caddyfile
-        }
-        [[ ! -d $is_caddy_conf ]] && mkdir -p $is_caddy_conf
-        caddy_config $2
-        manage restart caddy &
+    nginx)
+        load nginx.sh
+        [[ $is_install_nginx ]] && nginx_config new
+        [[ ! -d $is_nginx_conf ]] && mkdir -p $is_nginx_conf
+        nginx_config $2
+        manage restart nginx &
         ;;
     config.json)
-        is_log='log:{output:"/var/log/'sing-box'/access.log",level:"info","timestamp":true}'
+        is_log='log:{output:"/var/log/'$is_core'/access.log",level:"info","timestamp":true}'
         is_dns='dns:{}'
         is_ntp='ntp:{"enabled":true,"server":"time.apple.com"},'
         if [[ -f /etc/sing-box/config.json ]]; then
@@ -485,19 +482,19 @@ change() {
     1)
         # new port
         is_new_port=$3
-        [[ $host && ! $is_caddy || $is_no_auto_tls ]] && err "($is_config_file) 不支持更改端口, 因为没啥意义."
+        [[ $host && ! $is_nginx || $is_no_auto_tls ]] && err "($is_config_file) 不支持更改端口, 因为没啥意义."
         if [[ $is_new_port && ! $is_auto ]]; then
             [[ ! $(is_test port $is_new_port) ]] && err "请输入正确的端口, 可选(1-65535)"
             [[ $is_new_port != 443 && $(is_test port_used $is_new_port) ]] && err "无法使用 ($is_new_port) 端口"
         fi
         [[ $is_auto ]] && get_port && is_new_port=$tmp_port
         [[ ! $is_new_port ]] && ask string is_new_port "请输入新端口:"
-        if [[ $is_caddy && $host ]]; then
+        if [[ $is_nginx && $host ]]; then
             net=$is_old_net
             is_https_port=$is_new_port
-            load caddy.sh
-            caddy_config $net
-            manage restart caddy &
+            load nginx.sh
+            nginx_config $net
+            manage restart nginx &
             info
         else
             add $net $is_new_port
@@ -627,18 +624,18 @@ change() {
     11)
         # new proxy site
         is_new_proxy_site=$3
-        [[ ! $is_caddy && ! $host ]] && {
+        [[ ! $is_nginx && ! $host ]] && {
             err "($is_config_file) 不支持更改伪装网站."
         }
-        [[ ! -f $is_caddy_conf/${host}.conf.add ]] && err "无法配置伪装网站."
+        [[ ! -f $is_nginx_conf/${host}.conf.add ]] && err "无法配置伪装网站."
         [[ ! $is_new_proxy_site ]] && ask string is_new_proxy_site "请输入新的伪装网站 (例如 example.com):"
         proxy_site=$(sed 's#^.*//##;s#/$##' <<<$is_new_proxy_site)
         [[ $(grep -i "^233boy.com$" <<<$proxy_site) ]] && {
             err "你干嘛～哎呦～"
         } || {
-            load caddy.sh
-            caddy_config proxy
-            manage restart caddy &
+            load nginx.sh
+            nginx_config proxy
+            manage restart nginx &
         }
         msg "\n已更新伪装网站为: $(_green $proxy_site) \n"
         ;;
@@ -667,15 +664,18 @@ del() {
         [[ ! $is_new_json ]] && manage restart &
         [[ ! $is_no_del_msg ]] && _green "\n已删除: $is_config_file\n"
 
-        [[ $is_caddy ]] && {
+        [[ $is_nginx && $host ]] && {
             is_del_host=$host
-            [[ $is_change ]] && {
-                [[ ! $old_host ]] && return # no host exist or not set new host;
-                is_del_host=$old_host
-            }
-            [[ $is_del_host && $host != $old_host && -f $is_caddy_conf/$is_del_host.conf ]] && {
-                rm -rf $is_caddy_conf/$is_del_host.conf $is_caddy_conf/$is_del_host.conf.add
-                [[ ! $is_new_json ]] && manage restart caddy &
+            # 如果是更改操作，检查是否需要删除旧域名的配置
+            if [[ $is_change ]]; then
+                [[ ! $old_host || $host == $old_host ]] && is_del_host=
+                [[ $old_host && $host != $old_host ]] && is_del_host=$old_host
+            fi
+            # 删除 nginx 配置和 SSL 证书符号链接（保留 Let's Encrypt 原始证书以便复用）
+            [[ $is_del_host && -f $is_nginx_conf/$is_del_host.conf ]] && {
+                rm -rf $is_nginx_conf/$is_del_host.conf $is_nginx_conf/$is_del_host.conf.add
+                rm -rf /etc/nginx/ssl/$is_del_host.crt /etc/nginx/ssl/$is_del_host.key
+                [[ ! $is_new_json ]] && manage restart nginx &
             }
         }
     fi
@@ -689,29 +689,31 @@ del() {
 
 # uninstall
 uninstall() {
-    if [[ $is_caddy ]]; then
-        is_tmp_list=("卸载 sing-box" "卸载 ${is_core_name} & Caddy")
+    if [[ $is_nginx ]]; then
+        is_tmp_list=("卸载 $is_core_name" "卸载 ${is_core_name} & Nginx")
         ask list is_do_uninstall
     else
         ask string y "是否卸载 ${is_core_name}? [y]:"
     fi
     manage stop &>/dev/null
     manage disable &>/dev/null
-    rm -rf /etc/sing-box /var/log/sing-box /usr/local/bin/sing-box ${is_sh_bin/sing-box/sb}
+    rm -rf /etc/sing-box /var/log/sing-box /usr/local/bin/sing-box ${is_sh_bin/$is_core/sb}
     if [[ $is_systemd ]]; then
-        rm -f /lib/systemd/system/sing-box.service
+        rm -f /lib/systemd/system/$is_core.service
     elif [[ $is_openrc ]]; then
-        rm -f /etc/init.d/sing-box
+        rm -f /etc/init.d/$is_core
     fi
-    sed -i "/sing-box/d" /root/.bashrc
-    # uninstall caddy; 2 is ask result
+    sed -i "/$is_core/d" /root/.bashrc
+    # uninstall nginx; 2 is ask result
     if [[ $REPLY == '2' ]]; then
-        manage stop caddy &>/dev/null
-        manage disable caddy &>/dev/null
+        manage stop nginx &>/dev/null
+        manage disable nginx &>/dev/null
         if [[ $is_systemd ]]; then
-            rm -rf /etc/caddy /usr/local/bin/caddy /lib/systemd/system/caddy.service
+            $cmd remove nginx -y &>/dev/null
+            rm -rf /etc/nginx /lib/systemd/system/nginx.service
         elif [[ $is_openrc ]]; then
-            rm -rf /etc/caddy /usr/local/bin/caddy /etc/init.d/caddy
+            $cmd remove nginx -y &>/dev/null
+            rm -rf /etc/nginx /etc/init.d/nginx
         fi
     fi
     [[ $is_install_sh ]] && return # reinstall
@@ -744,15 +746,15 @@ manage() {
         ;;
     esac
     case $2 in
-    caddy)
+    nginx)
         is_do_name=$2
-        is_run_bin=/usr/local/bin/caddy
-        is_do_name_msg=Caddy
+        is_run_bin=/usr/sbin/nginx
+        is_do_name_msg=Nginx
         ;;
     *)
-        is_do_name=sing-box
+        is_do_name=$is_core
         is_run_bin=/etc/sing-box/bin/sing-box
-        is_do_name_msg=sing-box
+        is_do_name_msg=$is_core_name
         ;;
     esac
     if [[ $is_systemd ]]; then
@@ -825,7 +827,7 @@ add() {
                 [[ $(grep -E -i "^$is_lower$" <<<$v) ]] && is_new_protocol=$v && break
             done
 
-            [[ ! $is_new_protocol ]] && err "无法识别 ($1), 请使用: sing-box add [protocol] [args... | auto]"
+            [[ ! $is_new_protocol ]] && err "无法识别 ($1), 请使用: $is_core add [protocol] [args... | auto]"
             ;;
         esac
     fi
@@ -882,7 +884,7 @@ add() {
     [[ $1 && ! $is_change ]] && {
         msg "\n使用协议: $is_new_protocol"
         # err msg tips
-        is_err_tips="\n\n请使用: $(_green sing-box add $1 $is_add_opts) 来添加 $is_new_protocol 配置"
+        is_err_tips="\n\n请使用: $(_green $is_core add $1 $is_add_opts) 来添加 $is_new_protocol 配置"
     }
 
     # remove old protocol args
@@ -968,7 +970,7 @@ add() {
     fi
 
     if [[ $is_use_tls ]]; then
-        if [[ ! $is_no_auto_tls && ! $is_caddy && ! $is_gen && ! $is_dont_test_host ]]; then
+        if [[ ! $is_no_auto_tls && ! $is_nginx && ! $is_gen && ! $is_dont_test_host ]]; then
             # test auto tls
             [[ $(is_test port_used 80) || $(is_test port_used 443) ]] && {
                 get_port
@@ -976,12 +978,12 @@ add() {
                 get_port
                 is_https_port=$tmp_port
                 warn "端口 (80 或 443) 已经被占用, 你也可以考虑使用 no-auto-tls"
-                msg "\e[41m no-auto-tls 帮助(help)\e[0m: $(msg_ul https://233boy.com/sing-box/no-auto-tls/)\n"
-                msg "\n Caddy 将使用非标准端口实现自动配置 TLS, HTTP:$is_http_port HTTPS:$is_https_port\n"
+                msg "\e[41m no-auto-tls 帮助(help)\e[0m: $(msg_ul https://233boy.com/$is_core/no-auto-tls/)\n"
+                msg "\n Nginx 将使用非标准端口实现自动配置 TLS, HTTP:$is_http_port HTTPS:$is_https_port\n"
                 msg "请确定是否继续???"
                 pause
             }
-            is_install_caddy=1
+            is_install_nginx=1
         fi
         # set host
         [[ ! $host ]] && ask string host "请输入域名:"
@@ -1029,9 +1031,9 @@ add() {
             [[ ! $tmp_uuid ]] && get_uuid
             is_test_json_save=/etc/sing-box/conf/tmp-test-$tmp_uuid
             cat <<<"$is_new_json" >$is_test_json_save
-            /etc/sing-box/bin/sing-box check -c $is_test_json_save &>/dev/null
+            $is_core_bin check -c $is_test_json_save &>/dev/null
             if [[ $? != 0 ]]; then
-                warn "Shadowsocks 协议 ($ss_method) 不支持使用密码 ($(_red_bg $ss_password))\n\n你可以使用命令: $(_green sing-box ss2022) 生成支持的密码.\n\n脚本将自动创建可用密码:)"
+                warn "Shadowsocks 协议 ($ss_method) 不支持使用密码 ($(_red_bg $ss_password))\n\n你可以使用命令: $(_green $is_core ss2022) 生成支持的密码.\n\n脚本将自动创建可用密码:)"
                 ss_password=
                 # create new json.
                 json_str=
@@ -1042,9 +1044,9 @@ add() {
 
     fi
 
-    # install caddy
-    if [[ $is_install_caddy ]]; then
-        get install-caddy
+    # install nginx
+    if [[ $is_install_nginx ]]; then
+        get install-nginx
     fi
 
     # create json
@@ -1111,10 +1113,10 @@ get() {
 
             is_config_name=$is_config_file
 
-            if [[ $is_caddy && $host && -f $is_caddy_conf/$host.conf ]]; then
-                is_tmp_https_port=$(grep -E -o "$host:[1-9][0-9]?+" $is_caddy_conf/$host.conf | sed s/.*://)
+            if [[ $is_nginx && $host && -f $is_nginx_conf/$host.conf ]]; then
+                is_tmp_https_port=$(grep -E 'listen.*ssl' $is_nginx_conf/$host.conf | head -1 | grep -oE '[0-9]+' | head -1)
             fi
-            if [[ $host && ! -f $is_caddy_conf/$host.conf ]]; then
+            if [[ $host && ! -f $is_nginx_conf/$host.conf ]]; then
                 is_no_auto_tls=1
             fi
             [[ $is_tmp_https_port ]] && is_https_port=$is_tmp_https_port
@@ -1241,9 +1243,9 @@ get() {
         ;;
     ssss | ss2022)
         if [[ $(grep 128 <<<$ss_method) ]]; then
-            /etc/sing-box/bin/sing-box generate rand 16 --base64
+            $is_core_bin generate rand 16 --base64
         else
-            /etc/sing-box/bin/sing-box generate rand 32 --base64
+            $is_core_bin generate rand 32 --base64
         fi
         ;;
     ping)
@@ -1254,14 +1256,14 @@ get() {
         [[ $(grep ":" <<<$ip) ]] && is_dns_type="aaaa"
         is_host_dns=$(_wget -qO- --header="accept: application/dns-json" "https://one.one.one.one/dns-query?name=$host&type=$is_dns_type")
         ;;
-    install-caddy)
-        _green "\n安装 Caddy 实现自动配置 TLS.\n"
+    install-nginx)
+        _green "\n安装 Nginx 实现自动配置 TLS.\n"
         load download.sh
-        download caddy
+        download nginx
         load systemd.sh
-        install_service caddy &>/dev/null
-        is_caddy=1
-        _green "安装 Caddy 成功.\n"
+        install_service nginx &>/dev/null
+        is_nginx=1
+        _green "安装 Nginx 成功.\n"
         ;;
     reinstall)
         is_install_sh=$(cat /etc/sing-box/sh/install.sh)
@@ -1277,30 +1279,30 @@ get() {
             }
         fi
         is_no_manage_msg=1
-        if [[ ! $(pgrep -f /etc/sing-box/bin/sing-box 2>/dev/null || grep -l "/etc/sing-box/bin/sing-box" /proc/*/cmdline 2>/dev/null) ]]; then
+        if [[ ! $(pgrep -f $is_core_bin 2>/dev/null || grep -l "$is_core_bin" /proc/*/cmdline 2>/dev/null) ]]; then
             _yellow "\n测试运行 sing-box ..\n"
             manage start &>/dev/null
-            if [[ $is_run_fail == sing-box ]]; then
+            if [[ $is_run_fail == $is_core ]]; then
                 _red "sing-box 运行失败信息:"
-                /etc/sing-box/bin/sing-box run -c /etc/sing-box/config.json -C /etc/sing-box/conf
+                $is_core_bin run -c /etc/sing-box/config.json -C /etc/sing-box/conf
             else
                 _green "\n测试通过, 已启动 sing-box ..\n"
             fi
         else
             _green "\nsing-box 正在运行, 跳过测试\n"
         fi
-        if [[ $is_caddy ]]; then
-            if [[ ! $(pgrep -f /usr/local/bin/caddy 2>/dev/null || grep -l "/usr/local/bin/caddy" /proc/*/cmdline 2>/dev/null) ]]; then
-                _yellow "\n测试运行 Caddy ..\n"
-                manage start caddy &>/dev/null
-                if [[ $is_run_fail == 'caddy' ]]; then
-                    _red "Caddy 运行失败信息:"
-                    /usr/local/bin/caddy run --config /etc/caddy/Caddyfile
+        if [[ $is_nginx ]]; then
+            if [[ ! $(pgrep -f "nginx: master" 2>/dev/null) ]]; then
+                _yellow "\n测试运行 Nginx ..\n"
+                manage start nginx &>/dev/null
+                if [[ $is_run_fail == 'nginx' ]]; then
+                    _red "Nginx 运行失败信息:"
+                    /usr/sbin/nginx -t
                 else
-                    _green "\n测试通过, 已启动 Caddy ..\n"
+                    _green "\n测试通过, 已启动 Nginx ..\n"
                 fi
             else
-                _green "\nCaddy 正在运行, 跳过测试\n"
+                _green "\nNginx 正在运行, 跳过测试\n"
             fi
         fi
         ;;
@@ -1332,7 +1334,7 @@ info() {
                 }
                 is_url="$is_protocol://$uuid@$host:$is_https_port?encryption=none&security=tls&type=$net&host=$host&path=$path#233boy-$net-$host"
             }
-            [[ $is_caddy ]] && is_can_change+=(11)
+            [[ $is_nginx ]] && is_can_change+=(11)
             is_info_str=($is_protocol $is_addr $is_https_port $uuid $net $host $path 'tls')
         else
             is_type=none
@@ -1420,7 +1422,7 @@ info() {
         msg "$a $tt= \e[${is_color}m${is_info_str[$i]}\e[0m"
     done
     if [[ $is_new_install ]]; then
-        warn "首次安装请查看脚本帮助文档: $(msg_ul https://233boy.com/sing-box/$is_core-script/)"
+        warn "首次安装请查看脚本帮助文档: $(msg_ul https://233boy.com/$is_core/$is_core-script/)"
     fi
     if [[ $is_url ]]; then
         msg "------------- ${info_list[12]} -------------"
@@ -1433,7 +1435,7 @@ info() {
         msg "------------- no-auto-tls INFO -------------"
         msg "端口(port): $port"
         msg "路径(path): $path"
-        msg "\e[41m帮助(help)\e[0m: $(msg_ul https://233boy.com/sing-box/no-auto-tls/)"
+        msg "\e[41m帮助(help)\e[0m: $(msg_ul https://233boy.com/$is_core/no-auto-tls/)"
     fi
     footer_msg
 }
@@ -1441,12 +1443,12 @@ info() {
 # footer msg
 footer_msg() {
     [[ $is_core_stop && ! $is_new_json ]] && warn "sing-box 当前处于停止状态."
-    [[ $is_caddy_stop && $host ]] && warn "Caddy 当前处于停止状态."
+    [[ $is_nginx_stop && $host ]] && warn "Nginx 当前处于停止状态."
     ####### 要点13脸吗只会改我链接的小人 #######
     unset c n m s b
     msg "------------- END -------------"
     msg "关注(tg): $(msg_ul https://t.me/tg2333)"
-    msg "文档(doc): $(msg_ul https://233boy.com/sing-box/$is_core-script/)"
+    msg "文档(doc): $(msg_ul https://233boy.com/$is_core/$is_core-script/)"
     msg "推广(ads): 机场推荐(sing-box services): $(msg_ul https://g${c}e${n}t${m}j${s}m${b}s.com/)\n"
     ####### 要点13脸吗只会改我链接的小人 #######
 }
@@ -1486,9 +1488,9 @@ url_qr() {
 # update core, sh, caddy
 update() {
     case $1 in
-    1 | core | sing-box)
+    1 | core | $is_core)
         is_update_name=core
-        is_show_name=sing-box
+        is_show_name=$is_core_name
         is_run_ver=v${is_core_ver##* }
         is_update_repo=SagerNet/sing-box
         ;;
@@ -1498,15 +1500,14 @@ update() {
         is_run_ver=$is_sh_ver
         is_update_repo=xiaoutrun-sketch/nova-sbv
         ;;
-    3 | caddy)
-        [[ ! $is_caddy ]] && err "不支持更新 Caddy."
-        is_update_name=caddy
-        is_show_name="Caddy"
-        is_run_ver=$is_caddy_ver
-        is_update_repo=$is_caddy_repo
+    3 | nginx)
+        [[ ! $is_nginx ]] && err "不支持更新 Nginx."
+        is_update_name=nginx
+        is_show_name="Nginx"
+        is_run_ver=$is_nginx_ver
         ;;
     *)
-        err "无法识别 ($1), 请使用: sing-box update [core | sh | caddy] [ver]"
+        err "无法识别 ($1), 请使用: $is_core update [core | sh | nginx] [ver]"
         ;;
     esac
     [[ $2 ]] && is_new_ver=v${2#v}
@@ -1558,8 +1559,8 @@ is_main_menu() {
         msg "\n管理状态执行: $(_green $is_do_manage)\n"
         ;;
     6)
-        is_tmp_list=("更新sing-box" "更新脚本")
-        [[ $is_caddy ]] && is_tmp_list+=("更新Caddy")
+        is_tmp_list=("更新$is_core_name" "更新脚本")
+        [[ $is_nginx ]] && is_tmp_list+=("更新Nginx")
         ask list is_do_update null "\n请选择更新:\n"
         update $REPLY
         ;;
@@ -1612,10 +1613,10 @@ main() {
     bin | pbk | check | completion | format | generate | geoip | geosite | merge | rule-set | run | tools)
         is_run_command=$1
         if [[ $1 == 'bin' ]]; then
-            /etc/sing-box/bin/sing-box ${@:2}
+            $is_core_bin ${@:2}
         else
             [[ $is_run_command == 'pbk' ]] && is_run_command="generate reality-keypair"
-            /etc/sing-box/bin/sing-box $is_run_command ${@:2}
+            $is_core_bin $is_run_command ${@:2}
         fi
         ;;
     bbr)
@@ -1663,7 +1664,7 @@ main() {
         esac
         is_dont_auto_exit=
         manage restart &
-        [[ $is_del_host ]] && manage restart caddy &
+        [[ $is_del_host ]] && manage restart nginx &
         ;;
     dns)
         load dns.sh
@@ -1677,11 +1678,11 @@ main() {
     fix-config.json)
         create config.json
         ;;
-    fix-caddyfile)
-        if [[ $is_caddy ]]; then
-            load caddy.sh
-            caddy_config new
-            manage restart caddy &
+    fix-nginxconf)
+        if [[ $is_nginx ]]; then
+            load nginx.sh
+            nginx_config new
+            manage restart nginx &
             _green "\nfix 完成.\n"
         else
             err "无法执行此操作"
@@ -1722,10 +1723,10 @@ main() {
         ;;
     s | status)
         msg "\nsing-box $is_core_ver: $is_core_status\n"
-        [[ $is_caddy ]] && msg "Caddy $is_caddy_ver: $is_caddy_status\n"
+        [[ $is_nginx ]] && msg "Nginx $is_nginx_ver: $is_nginx_status\n"
         ;;
     start | stop | r | restart)
-        [[ $2 && $2 != 'caddy' ]] && err "无法识别 ($2), 请使用: sing-box $1 [caddy]"
+        [[ $2 && $2 != 'nginx' ]] && err "无法识别 ($2), 请使用: $is_core $1 [nginx]"
         manage $1 $2 &
         ;;
     t | test)
@@ -1742,8 +1743,8 @@ main() {
         is_main_menu
         ;;
     v | ver | version)
-        [[ $is_caddy_ver ]] && is_caddy_ver="/ $(_blue Caddy $is_caddy_ver)"
-        msg "\n$(_green sing-box $is_core_ver) / $(_cyan sing-box script $is_sh_ver) $is_caddy_ver\n"
+        [[ $is_nginx_ver ]] && is_nginx_ver_display="/ $(_blue Nginx $is_nginx_ver)"
+        msg "\n$(_green sing-box $is_core_ver) / $(_cyan sing-box script $is_sh_ver) $is_nginx_ver_display\n"
         ;;
     h | help | --help)
         load help.sh
@@ -1760,7 +1761,7 @@ main() {
                 change
             }
         else
-            err "无法识别 ($1), 获取帮助请使用: sing-box help"
+            err "无法识别 ($1), 获取帮助请使用: $is_core help"
         fi
         ;;
     esac

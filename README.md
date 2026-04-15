@@ -85,16 +85,16 @@ Usage: sing-box [options]... [args]...
    dd, ddel [name...]                              删除多个配置**
    fix [name]                                      修复一个配置
    fix-all                                         修复全部配置
-   fix-caddyfile                                   修复 Caddyfile
+   fix-nginxconf                                   修复 Nginx 配置
    fix-config.json                                 修复 config.json
    import                                          导入 sing-box/v2ray 脚本配置
 
 管理:
    un, uninstall                                   卸载
-   u, update [core | sh | caddy] [ver]             更新
+   u, update [core | sh | nginx] [ver]             更新
    U, update.sh                                    更新脚本
    s, status                                       运行状态
-   start, stop, restart [caddy]                    启动, 停止, 重启
+   start, stop, restart [nginx]                    启动, 停止, 重启
    t, test                                         测试运行
    reinstall                                       重装脚本
 

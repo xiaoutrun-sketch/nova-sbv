@@ -18,8 +18,8 @@ in_conf() {
     host="${ws_host}${h2_host}"
     [[ ! $uuid ]] && uuid=$trojan_password
     if [[ $host ]]; then
-        if [[ $is_caddy && -f $is_caddy_conf/$host.conf ]]; then
-            tmp_tlsport=$(grep -E -o "$host:[1-9][0-9]?+" $is_caddy_conf/$host.conf | sed s/.*://)
+        if [[ $is_nginx && -f $is_nginx_conf/$host.conf ]]; then
+            tmp_tlsport=$(grep -E 'listen.*ssl' $is_nginx_conf/$host.conf | head -1 | grep -oE '[0-9]+' | head -1)
         fi
         [[ $tmp_tlsport ]] && https_port=$tmp_tlsport
         add $is_protocol-$net-tls
@@ -72,7 +72,7 @@ if [[ ${is_list[@]} ]]; then
     manage restart &
     [[ $is_xray_in ]] && xray restart &
     [[ $is_v2ray_in ]] && v2ray restart &
-    [[ ${is_list[@],,} =~ "tls" && $is_caddy ]] && manage restart caddy &
+    [[ ${is_list[@],,} =~ "tls" && $is_nginx ]] && manage restart nginx &
 
 else
     err "没有找到可导入的配置..."
